@@ -1,94 +1,156 @@
-# CRACK: Contrastive Relational-Aware Compression of Knowledge
+# ARK: Angular Relational Knowledge Distillation
 
-This repository is the official implementation of the paper **CRACK: Contrastive Relational-Aware Compression of Knowledge for Machine Learning Force Fields**.
+This repository contains the implementation used in:
 
-CRACK is a novel knowledge distillation (KD) framework that directly distills interatomic relational knowledge from a large, accurate *teacher* Machine Learning Force Field (MLFF) into a smaller, more efficient *student* model. It achieves this by modeling each interatomic interaction as a *relational vector* derived from the embeddings of bonded atoms. Using a contrastive learning objective, CRACK trains the student to generate relational vectors that are uniquely identifiable with their teacher counterparts, effectively teaching the student the geometry of the teacher's learned Potential Energy Surface (PES).
+**Angular relational knowledge distillation of machine learning interatomic potentials for scalable catalyst exploration**  
+(`paperworks/main.tex`)
 
-On the challenging OC20 benchmark, CRACK enables a compact 22M-parameter student EquiformerV2 to achieve superior energy and force prediction accuracy, significantly outperforming strong distillation baselines.
+ARK distills relational physics from a large teacher MLIP into a compact student by aligning **edge-level relational vectors** with a contrastive objective.
 
 <p align="center">
   <img src="docs/CRACK_Overview.png" width="90%">
 </p>
 
-This repository extends the original [EquiformerV2](https://github.com/atomicarchitects/equiformer) repository.
+## What this repository currently contains
 
-## Environment Setup
+- OC20-focused ARK training/inference pipeline built on EquiformerV2.
+- Teacher-student distillation in a single model (`nets/equiformer_v2/equiformer_v2_oc20.py`).
+- ARK contrastive edge loss and n2n loss in `oc20/trainer/forces_trainer_v2.py`.
+- Configs and scripts for OC20 O-adsorbate / 200k experiments under `oc20/configs` and `scripts/train`.
+- Bundled `fairchem/` codebase for OCP tooling.
 
-### Environment 
+## Important naming note
 
-We use conda to install required packages:
-```
-    conda env create -f env/env.yml
-```
+The method name in the paper is **ARK**.  
+Some code/config keys still use older internal names:
 
-We activate the environment:
-```
-    conda activate equiformer_v2
-```
+- `crack_loss(...)` in `oc20/trainer/forces_trainer_v2.py` is the ARK relational contrastive loss.
+- `optim.crack_coefficient` in YAML controls ARK loss weight.
 
-Finally, we install `fairchem` by running:
-```
-    cd fairchem
-    pip install -e .
-```
+## Repository map
 
+- `main_oc20.py`: main entrypoint for train/validate/predict.
+- `oc20/configs/s2ef/...`: experiment YAMLs.
+- `oc20/trainer/forces_trainer_v2.py`: losses, train loop, evaluation, visualization.
+- `nets/equiformer_v2/equiformer_v2_oc20.py`: EquiformerV2 teacher + 2-layer student branch.
+- `scripts/train/oc20/s2ef/equiformer_v2/*.sh`: example launch scripts.
+- `paperworks/main.tex`: manuscript source.
 
-### OC20
-
-The OC20 S2EF dataset can be downloaded by following instructions in their [GitHub repository](https://github.com/Open-Catalyst-Project/ocp/blob/5a7738f9aa80b1a9a7e0ca15e33938b4d2557edd/DATASET.md#download-and-preprocess-the-dataset).
-
-For example, we can download the OC20 S2EF-2M dataset of O absorbates by running:
-```
-    cd fairchem
-    python scripts/download_data_Oabs.py --task is2re --split "Oabs" --num-workers 8 --ref-energy
-```
-
-After downloading, place the datasets under `datasets/oc20/` by using `ln -s`:
-```
-    cd datasets
-    mkdir oc20
-    cd oc20
-    ln -s ../../fairchem/data/Oabs Oabs
-```
-
-
-## Training and Inference
-
-
-### Distillation with CRACK
-
-To train a student model using CRACK knowledge distillation, you can run the following script. This will start the training process using the configuration file, which specifies the teacher model, student architecture, and distillation hyperparameters.
+## Environment setup
 
 ```bash
-sh scripts/train/oc20/s2ef/equiformer_v2/22M_crack.sh
+conda env create -f env/env_equiformer_v2.yml
+conda activate equiformer_v2
+export PYTHONNOUSERSITE=True
+cd fairchem
+pip install -e .
+cd ..
 ```
 
-### OC20 Inference
+If `main_oc20.py` fails with missing packages (for example `submitit`), install them in this environment.
 
-To run inference with the original EquiformerV2 models on the OC20 **is2re** dataset, you can use the following scripts:
-    
+## Data setup (OC20)
+
+Use official OC20 data instructions or prepare local LMDB paths that match the YAML configs.
+
+Example O-adsorbate download script included in this repo:
+
 ```bash
-sh scripts/train/oc20/s2ef/equiformer_v2/31M_exp.sh
+cd fairchem
+python scripts/download_data_Oabs.py --task is2re --split Oabs --num-workers 8 --ref-energy
+cd ..
+```
+
+Provided configs expect these paths:
+
+- `oc20/configs/s2ef/all_md/equiformer_v2/31M_exp.yml`
+- `oc20/configs/s2ef/all_md/equiformer_v2/153M_exp.yml`
+- `dataset.train.src: datasets/oc20/Oabs_train/`
+- `dataset.val.src: datasets/oc20/Oabs_val/`
+
+Some configs under `oc20/configs/s2ef/2M/equiformer_v2/` still contain machine-specific absolute paths (`/DATA/...`). Update them before running.
+
+## Training and inference
+
+### 1) ARK distillation training (example: 83M config)
+
+```bash
+python main_oc20.py \
+  --mode train \
+  --config-yml oc20/configs/s2ef/2M/equiformer_v2/83M_exp.yml \
+  --run-dir models \
+  --print-every 200 \
+  --amp \
+  --checkpoint save_models/eq2_153M_ec4_allmd.pt
+```
+
+Equivalent script:
+
+```bash
+sh scripts/train/oc20/s2ef/equiformer_v2/83M_exp.sh
+```
+
+### 2) ARK distillation training (example: 153M Oabs config)
+
+```bash
+python main_oc20.py \
+  --mode train \
+  --config-yml oc20/configs/s2ef/2M/equiformer_v2/153M_exp_Oabs.yml \
+  --run-dir models \
+  --print-every 200 \
+  --amp \
+  --checkpoint save_models/eq2_153M_ec4_allmd.pt
+```
+
+Equivalent script:
+
+```bash
 sh scripts/train/oc20/s2ef/equiformer_v2/153M_exp.sh
 ```
 
-## Checkpoints
+### 3) Validate a checkpoint
 
-We provide checkpoints for the original EquiformerV2 models as well as our CRACK-distilled student model.
+```bash
+python main_oc20.py \
+  --mode validate \
+  --config-yml oc20/configs/s2ef/2M/equiformer_v2/83M_exp.yml \
+  --run-dir models \
+  --amp \
+  --checkpoint <path-to-checkpoint.pt>
+```
 
-### CRACK Student Model
-This is the 22M-parameter student model trained with CRACK, using the 153M EquiformerV2 as the teacher.
+### 4) Predict
 
-|Model	|Params	|Dataset|Download	|val force MAE (meV / Å) |val energy MAE (meV) |
-|---	|---	|---	|---	|---	|---	|
-|EquiformerV2 (Student) |22M |O* |[checkpoint](https://github.com/hyukjunlim/CRACK/releases/download/v1.0/crack_student_22m.pt) \| [config](oc20/configs/s2ef/all_md/equiformer_v2/equiformer_v2_N@20_L@6_M@3_22M_crack.yml) |5.8 | 231.7 |
+```bash
+python main_oc20.py \
+  --mode predict \
+  --config-yml oc20/configs/s2ef/all_md/equiformer_v2/31M_exp.yml \
+  --run-dir models \
+  --amp \
+  --checkpoint <path-to-checkpoint.pt>
+```
 
-### Original EquiformerV2 Models
-These are the EquiformerV2 models trained on S2EF-2M or S2EF-All+MD datasets without distillation.
+## ARK-related optimization keys
 
-|Model	|Params |Split	|Download	|val force MAE (meV / Å) |val energy MAE (meV) |
-|---	|---	|---	|---	|---	|---	| 
-|EquiformerV2	|83M |2M	|[checkpoint](https://dl.fbaipublicfiles.com/opencatalystproject/models/2023_06/oc20/s2ef/eq2_83M_2M.pt) \| [config](oc20/configs/s2ef/2M/equiformer_v2/equiformer_v2_N@12_L@6_M@2_epochs@30.yml)	|19.4 | 278 |
-|EquiformerV2 |31M |All+MD |[checkpoint](https://dl.fbaipublicfiles.com/opencatalystproject/models/2023_06/oc20/s2ef/eq2_31M_ec4_allmd.pt) \| [config](oc20/configs/s2ef/all_md/equiformer_v2/equiformer_v2_N@8_L@4_M@2_31M.yml) |16.3 | 232 |
-|EquiformerV2 (Teacher)|153M |All+MD | [checkpoint](https://dl.fbaipublicfiles.com/opencatalystproject/models/2023_06/oc20/s2ef/eq2_153M_ec4_allmd.pt) \| [config](oc20/configs/s2ef/all_md/equiformer_v2/equiformer_v2_N@20_L@6_M@3_153M.yml) |15.0 | 227 |
+From the YAML `optim` block:
 
+- `crack_coefficient`: ARK relational contrastive loss weight.
+- `n2n_coefficient`: node-to-node feature matching loss weight.
+- `energy_coefficient`: energy loss weight.
+- `energy_coefficient2`: per-atom energy consistency loss weight.
+- `lr_initial_e`, `lr_initial_f`, `lr_initial_student`: separate learning rates for parameter groups.
+
+## Reported paper highlights
+
+From `paperworks/main.tex`:
+
+- ARK validates across OC20, OMat24, and SPICE benchmarks.
+- On OC20, ARK-trained student reports `231.7 meV` energy MAE and `5.8 meV/Angstrom` force MAE.
+- In the ORR screening case study, ARK enables up to `11.9x` acceleration in the multi-fidelity workflow.
+
+## Acknowledgement
+
+This repository builds on:
+
+- EquiformerV2: https://github.com/atomicarchitects/equiformer
+- FAIR-Chem / OCP tooling: https://github.com/FAIR-Chem/fairchem

@@ -368,7 +368,11 @@ class ForcesTrainerV2(BaseTrainerV2):
 
                 # Get a batch.
                 batch = next(train_loader_iter)
-
+                if self.step == 1:  # run once
+                    m = self.model.module if hasattr(self.model, "module") else self.model
+                    m.eval()  # optional, for stable timing
+                    stats = m.benchmark_teacher_timing(batch, num_warmup=5, num_iters=20)
+                    print(stats, flush=True)
                 # Forward, loss, backward.
                 with torch.cuda.amp.autocast(enabled=self.scaler is not None):
                     out = self._forward(batch)

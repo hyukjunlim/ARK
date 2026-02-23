@@ -151,7 +151,10 @@ class EquiformerV2_OC20(BaseModel):
         drop_path_rate=0.05, 
         proj_drop=0.0, 
 
-        weight_init='normal'
+        weight_init='normal',
+        compute_teacher_hessian=False,
+        measure_teacher_wall_clock=False,
+        print_teacher_timing=False,
     ):
         super().__init__()
 
@@ -204,8 +207,14 @@ class EquiformerV2_OC20(BaseModel):
 
         self.weight_init = weight_init
         assert self.weight_init in ['normal', 'uniform']
+        self.compute_teacher_hessian = compute_teacher_hessian
+        self.measure_teacher_wall_clock = measure_teacher_wall_clock
+        self.print_teacher_timing = print_teacher_timing
 
         self.device = 'cpu' #torch.cuda.current_device()
+        self.teacher_hessian = None
+        self.teacher_forces = None
+        self.last_teacher_timing = {}
 
         self.grad_forces = False
         self.num_resolutions = len(self.lmax_list)
@@ -469,18 +478,26 @@ class EquiformerV2_OC20(BaseModel):
         atomic_numbers = data.atomic_numbers.long()
         num_atoms = len(atomic_numbers)
         pos = data.pos
-        
-        if set_pos_requires_grad:
-            pos.requires_grad_(True)
+        original_pos = data.pos
 
-        (
-            edge_index,
-            edge_distance,
-            edge_distance_vec,
-            cell_offsets,
-            _,  # cell offset distances
-            neighbors,
-        ) = self.generate_graph(data)
+        if set_pos_requires_grad:
+            # Keep the original batch tensor unchanged and build a differentiable
+            # position tensor for Hessian/force computation.
+            pos = original_pos.detach().clone().requires_grad_(True)
+            data.pos = pos
+
+        try:
+            (
+                edge_index,
+                edge_distance,
+                edge_distance_vec,
+                cell_offsets,
+                _,  # cell offset distances
+                neighbors,
+            ) = self.generate_graph(data)
+        finally:
+            if set_pos_requires_grad:
+                data.pos = original_pos
 
         ###############################################################
         # Initialize data structures
@@ -540,14 +557,104 @@ class EquiformerV2_OC20(BaseModel):
         
         return atomic_numbers, num_atoms, pos, edge_index, edge_distance, edge_distance_vec, x
 
+    def _compute_teacher_hessian(self, total_energy, pos):
+        grad = torch.autograd.grad(
+            outputs=total_energy,
+            inputs=pos,
+            create_graph=True,
+            retain_graph=True,
+        )[0]
+        if grad is None:
+            raise RuntimeError("Failed to compute teacher gradients for Hessian.")
+
+        grad_flat = grad.reshape(-1)
+        num_coords = grad_flat.numel()
+        hessian_rows = []
+        for i in range(num_coords):
+            second_grad = torch.autograd.grad(
+                outputs=grad_flat[i],
+                inputs=pos,
+                create_graph=False,
+                retain_graph=(i + 1 < num_coords),
+            )[0]
+            hessian_rows.append(second_grad.reshape(-1))
+        hessian = torch.stack(hessian_rows, dim=0)
+        return hessian.detach(), (-grad).detach()
+
+    def _synchronize_if_cuda(self, device):
+        if device is not None and device.type == "cuda":
+            torch.cuda.synchronize(device)
+
+    def _normalize_benchmark_batch(self, data):
+        if isinstance(data, (list, tuple)):
+            for shard in data:
+                if shard is not None:
+                    data = shard
+                    break
+            else:
+                raise ValueError("Received an empty batch list/tuple for benchmarking.")
+        model_device = next(self.parameters()).device
+        if hasattr(data, "to"):
+            data = data.to(model_device)
+        return data
+
+    def benchmark_teacher_timing(self, data, num_warmup=3, num_iters=10):
+        data = self._normalize_benchmark_batch(data)
+
+        prev_compute_teacher_hessian = self.compute_teacher_hessian
+        prev_measure_teacher_wall_clock = self.measure_teacher_wall_clock
+        prev_print_teacher_timing = self.print_teacher_timing
+
+        self.measure_teacher_wall_clock = True
+        self.print_teacher_timing = False
+
+        def _run(with_hessian):
+            self.compute_teacher_hessian = with_hessian
+            times = []
+            total_iters = num_warmup + num_iters
+            for i in range(total_iters):
+                _ = self.forward(data)
+                if i >= num_warmup:
+                    key = (
+                        "teacher_forward_plus_hessian_s"
+                        if with_hessian
+                        else "teacher_forward_only_s"
+                    )
+                    times.append(float(self.last_teacher_timing[key]))
+            return float(np.mean(times)), float(np.std(times))
+
+        try:
+            forward_mean, forward_std = _run(with_hessian=False)
+            forward_plus_hessian_mean, forward_plus_hessian_std = _run(with_hessian=True)
+        finally:
+            self.compute_teacher_hessian = prev_compute_teacher_hessian
+            self.measure_teacher_wall_clock = prev_measure_teacher_wall_clock
+            self.print_teacher_timing = prev_print_teacher_timing
+
+        return {
+            "teacher_forward_only_mean_s": forward_mean,
+            "teacher_forward_only_std_s": forward_std,
+            "teacher_forward_plus_hessian_mean_s": forward_plus_hessian_mean,
+            "teacher_forward_plus_hessian_std_s": forward_plus_hessian_std,
+            "teacher_hessian_only_mean_s": forward_plus_hessian_mean - forward_mean,
+            "num_warmup": int(num_warmup),
+            "num_iters": int(num_iters),
+        }
+
     @conditional_grad(torch.enable_grad())
     def forward(self, data):
         self.batch_size = len(data.natoms)
         self.dtype = data.pos.dtype
         self.device = data.pos.device
+        self.teacher_hessian = None
+        self.teacher_forces = None
+        self.last_teacher_timing = {}
         
         atomic_numbers, num_atoms, pos, edge_index, edge_distance, edge_distance_vec, x = \
-            self._initialize_graph_and_embeddings(data, set_pos_requires_grad=False)
+            self._initialize_graph_and_embeddings(
+                data,
+                set_pos_requires_grad=self.compute_teacher_hessian,
+            )
         
         atomic_numbers_s, num_atoms_s, pos_s, edge_index_s, edge_distance_s, edge_distance_vec_s, x_s = \
             self._initialize_graph_and_embeddings(data, set_pos_requires_grad=False)
@@ -561,10 +668,11 @@ class EquiformerV2_OC20(BaseModel):
         x0 = x.clone()
         
         pure_eqv2 = False
-        speed_compare = False
-        
-        if speed_compare:
-            start_time1 = time.time()
+
+        teacher_start_time = None
+        if self.measure_teacher_wall_clock:
+            self._synchronize_if_cuda(self.device)
+            teacher_start_time = time.perf_counter()
         for i in range(self.num_layers):
             x = self.blocks[i](
                 x,                  # SO3_Embedding
@@ -575,11 +683,46 @@ class EquiformerV2_OC20(BaseModel):
             )
             
         # Final layer norm
-        x.embedding = self.norm(x.embedding).detach()
-        
-        if speed_compare:
-            end_time1 = time.time()
-            print(f"Time taken for {self.num_layers} layers: {end_time1 - start_time1} seconds", flush=True)
+        x.embedding = self.norm(x.embedding)
+
+        teacher_forward_only_time = None
+        if self.measure_teacher_wall_clock and teacher_start_time is not None:
+            self._synchronize_if_cuda(self.device)
+            teacher_forward_only_time = time.perf_counter() - teacher_start_time
+            self.last_teacher_timing["teacher_forward_only_s"] = teacher_forward_only_time
+
+        if self.compute_teacher_hessian:
+            teacher_energy_for_hessian = self.energy_block(x)
+            teacher_node_energy_for_hessian = teacher_energy_for_hessian.embedding.narrow(1, 0, 1)
+            teacher_energy = torch.zeros(
+                len(data.natoms),
+                device=teacher_node_energy_for_hessian.device,
+                dtype=teacher_node_energy_for_hessian.dtype,
+            )
+            teacher_energy.index_add_(0, data.batch, teacher_node_energy_for_hessian.view(-1))
+            teacher_energy = teacher_energy / _AVG_NUM_NODES
+            self.teacher_hessian, self.teacher_forces = self._compute_teacher_hessian(
+                teacher_energy.sum(),
+                pos,
+            )
+
+        if self.measure_teacher_wall_clock and teacher_start_time is not None:
+            if self.compute_teacher_hessian:
+                self._synchronize_if_cuda(self.device)
+                teacher_forward_plus_hessian_time = time.perf_counter() - teacher_start_time
+                self.last_teacher_timing["teacher_forward_plus_hessian_s"] = teacher_forward_plus_hessian_time
+                if teacher_forward_only_time is not None:
+                    self.last_teacher_timing["teacher_hessian_only_s"] = (
+                        teacher_forward_plus_hessian_time - teacher_forward_only_time
+                    )
+            else:
+                self.last_teacher_timing["teacher_forward_plus_hessian_s"] = None
+                self.last_teacher_timing["teacher_hessian_only_s"] = None
+
+            if self.print_teacher_timing:
+                print(f"[teacher_timing] {self.last_teacher_timing}", flush=True)
+
+        x.embedding = x.embedding.detach()
             
         ###############################################################
         # Student
@@ -587,9 +730,6 @@ class EquiformerV2_OC20(BaseModel):
         if pure_eqv2:
             predicted_x1 = x.clone()
         else:
-            if speed_compare:
-                start_time2 = time.time()
-
             for i in range(self.num_layers_student):
                 x_s = self.blocks_student[i](
                     x_s,                  # SO3_Embedding
@@ -605,10 +745,6 @@ class EquiformerV2_OC20(BaseModel):
             res_x_s = x_s.embedding
             predicted_x1 = self.delta_student(x_s)
             predicted_x1.embedding = res_x_s + predicted_x1.embedding
-            
-            if speed_compare:
-                end_time2 = time.time()
-                print(f"Time taken for {self.num_layers_student} layers: {end_time2 - start_time2} seconds", flush=True)
                 
             # SSL-KD
             embs_teacher = x.embedding.narrow(1, 0, 1).reshape(N, -1)
