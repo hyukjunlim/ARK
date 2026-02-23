@@ -535,9 +535,9 @@ class ForcesTrainerV2(BaseTrainerV2):
         labels = torch.arange(z1.size(0), device=z1.device)
         return F.cross_entropy(logits, labels)
     
-    def crack_loss(self, z1, z2, edge_index, temperature=0.15):
+    def ark_loss(self, z1, z2, edge_index, temperature=0.15):
         """
-        CRACK: Contrastive Relational-Aware Compression of Knowledge Loss. 
+        ark: Contrastive Relational-Aware Compression of Knowledge Loss. 
         Distills the teacher's understanding of interatomic relationships into a student model. 
         Args: 
             z1: Teacher's final node (atom) embeddings [N, D_teacher]. 
@@ -562,18 +562,11 @@ class ForcesTrainerV2(BaseTrainerV2):
     def _compute_loss(self, out, batch_list):
         loss = []
         
-        # # InfoNCE loss
-        # info_nce_mult = self.config["optim"].get("info_nce_coefficient", 10)
-        # info_nce_loss = self.infonce_loss(out["embs_student"], out["embs_teacher"])
-        # loss.append(
-        #     info_nce_mult * info_nce_loss
-        # )
-        
-        # Crack loss
-        crack_mult = self.config["optim"].get("crack_coefficient", 10)
-        crack_loss = self.crack_loss(out["embs_student"], out["embs_teacher"], out["edge_index"])
+        # ark loss
+        ark_mult = self.config["optim"].get("ark_coefficient", 10)
+        ark_loss = self.ark_loss(out["embs_student"], out["embs_teacher"], out["edge_index"])
         loss.append(
-            crack_mult * crack_loss
+            ark_mult * ark_loss
         )
         
         # n2n loss.

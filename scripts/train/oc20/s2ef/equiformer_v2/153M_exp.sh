@@ -1,6 +1,6 @@
 python main_oc20.py \
     --mode train \
-    --config-yml 'oc20/configs/s2ef/2M/equiformer_v2/153M_exp_Oabs.yml' \
+    --config-yml 'oc20/configs/s2ef/2M/equiformer_v2/153M_exp_Oads.yml' \
     --run-dir 'models' \
     --print-every 200 \
     --amp \

@@ -26,7 +26,7 @@ DOWNLOAD_LINKS = {
     },
     "is2re": {
         "original": "https://dl.fbaipublicfiles.com/opencatalystproject/data/is2res_train_val_test_lmdbs.tar.gz",
-        "Oabs": "https://dl.fbaipublicfiles.com/opencatalystproject/data/per_adsorbate_is2res/0.tar",
+        "Oads": "https://dl.fbaipublicfiles.com/opencatalystproject/data/per_adsorbate_is2res/0.tar",
     }
 }
 
@@ -50,7 +50,7 @@ def get_data(datadir, task, split, del_intmd_files):
         os.path.basename(filename).split(".")[0],
     )
     compressed_dir = os.path.join(dirname, os.path.basename(dirname))
-    output_path = os.path.join(datadir, "Oabs")
+    output_path = os.path.join(datadir, "Oads")
     uncompressed_dir = uncompress_data(compressed_dir)
     extract_last_frame(uncompressed_dir)
     write_txt_file(compressed_dir, uncompressed_dir)
