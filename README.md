@@ -68,4 +68,4 @@ python main_oc20.py \
 This repository builds on:
 
 - EquiformerV2: https://github.com/atomicarchitects/equiformer_v2
-- FAIR-Chem / OCP tooling: https://github.com/FAIR-Chem/fairchem
+- FAIRChem: https://github.com/facebookresearch/fairchem
