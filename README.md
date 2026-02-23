@@ -52,29 +52,12 @@ python main_oc20.py \
   --checkpoint save_models/eq2_153M_ec4_allmd.pt
 ```
 
-Equivalent script:
-
-```bash
-sh scripts/train/oc20/s2ef/equiformer_v2/153M_exp.sh
-```
-
 ### Validate a checkpoint
 
 ```bash
 python main_oc20.py \
   --mode validate \
   --config-yml oc20/configs/s2ef/2M/equiformer_v2/153M_exp.yml \
-  --run-dir models \
-  --amp \
-  --checkpoint <path-to-checkpoint.pt>
-```
-
-### Predict
-
-```bash
-python main_oc20.py \
-  --mode predict \
-  --config-yml oc20/configs/s2ef/all_md/equiformer_v2/31M_exp.yml \
   --run-dir models \
   --amp \
   --checkpoint <path-to-checkpoint.pt>
