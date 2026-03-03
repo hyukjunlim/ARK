@@ -8,13 +8,13 @@ save_output/
 __pycache__/
 *.pt
 *.pyc
+*.pkl
 *.tar.gz
 
 wandb
 /data
 checkpoints
 results
-logs
 *.traj
 experimental
 

@@ -1,10 +1,3 @@
-# FORK
+# SPICE Knowledge Distillation
 
-## Cloned from https://github.com/ASK-Berkeley/MLFF-distill
-
-# Usage
-
-```bash
-git clone --recurse-submodules https://github.com/hyukjunlim/FORK_MLFF
-pip install -e fairchem/packages/fairchem-core/
-```
+This repository contains the implementation used to distill the MACE-OFF Large model on the SPICE dataset.

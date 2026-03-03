@@ -1,0 +1,165 @@
+submitit INFO (2025-10-05 18:01:01,453) - Starting with JobEnvironment(job_id=22068, hostname=n012.hpc, local_rank=0(1), node=0(1), global_rank=0(1))
+submitit INFO (2025-10-05 18:01:01,453) - Loading pickle: /home/hyukjunlim03/ccel/fairchem/logs/22068/22068_submitted.pkl
+Setting env PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
+Init: tcp://n012:32899, 1, 0
+local rank: 0, visible devices: 0
+Project root: /home/hyukjunlim03/ccel/fairchem/src/fairchem
+local rank base: 0
+amp: false
+cmd:
+  checkpoint_dir: models/checkpoints/2025-10-05-18-01-52
+  commit: core:f51a9e8,experimental:NA
+  identifier: ''
+  logs_dir: models/logs/wandb/2025-10-05-18-01-52
+  print_every: 200
+  results_dir: models/results/2025-10-05-18-01-52
+  seed: 42
+  timestamp_id: 2025-10-05-18-01-52
+  version: 0.1.dev978+g5ebd6d1
+dataset:
+  format: oc22_lmdb
+  key_mapping:
+    force: forces
+    y: energy
+  src: /DATA/user_scratch/hyukjunlim03/2M/
+evaluation_metrics:
+  metrics:
+    energy:
+    - mae
+    forces:
+    - mae
+  primary_metric: forces_mae
+gp_gpus: null
+gpus: 1
+logger: wandb
+loss_functions:
+- energy:
+    coefficient: 4
+    fn: mae
+- forces:
+    coefficient: 100
+    fn: l2mae
+model:
+  activation: silu
+  atom_edge_interaction: false
+  atom_interaction: false
+  cbf:
+    name: spherical_harmonics
+  cutoff: 6.0
+  cutoff_aeaint: 6.0
+  cutoff_aint: 6.0
+  cutoff_qint: 6.0
+  direct_forces: true
+  edge_atom_interaction: false
+  emb_size_aint_in: 32
+  emb_size_aint_out: 32
+  emb_size_atom: 64
+  emb_size_cbf: 8
+  emb_size_edge: 128
+  emb_size_quad_in: 16
+  emb_size_quad_out: 16
+  emb_size_rbf: 8
+  emb_size_sbf: 16
+  emb_size_trip_in: 32
+  emb_size_trip_out: 32
+  enforce_max_neighbors_strictly: false
+  envelope:
+    exponent: 5
+    name: polynomial
+  extensive: true
+  forces_coupled: false
+  max_neighbors: 30
+  max_neighbors_aeaint: 20
+  max_neighbors_aint: 1000
+  max_neighbors_qint: 8
+  name: gemnet_oc
+  num_after_skip: 2
+  num_atom: 2
+  num_atom_emb_layers: 2
+  num_before_skip: 2
+  num_blocks: 2
+  num_concat: 1
+  num_global_out_layers: 2
+  num_output_afteratom: 2
+  num_radial: 32
+  num_spherical: 7
+  otf_graph: true
+  output_init: HeOrthogonal
+  qint_tags:
+  - 1
+  - 2
+  quad_interaction: false
+  rbf:
+    name: gaussian
+  regress_forces: true
+  sbf:
+    name: legendre_outer
+  scale_file: configs/oc20/s2ef/2M/crack/scaling_factors/crack.pt
+optim:
+  batch_size: 8
+  clip_grad_norm: 10
+  ema_decay: 0.999
+  eval_batch_size: 8
+  eval_every: 5000
+  factor: 0.8
+  lr_initial: 0.0005
+  max_epochs: 5
+  mode: min
+  num_workers: 2
+  optimizer: AdamW
+  optimizer_params:
+    amsgrad: true
+    weight_decay: 0
+  patience: 3
+  scheduler: LambdaLR
+  scheduler_params:
+    lambda_type: cosine
+    lr_min_factor: 0.01
+    warmup_epochs: 0.05
+    warmup_factor: 0.2
+outputs:
+  energy:
+    level: system
+    prediction_dtype: float32
+    shape: 1
+  forces:
+    eval_on_free_atoms: true
+    irrep_dim: 1
+    level: atom
+    prediction_dtype: float32
+    train_on_free_atoms: true
+relax_dataset: {}
+slurm:
+  cpus_per_task: 3
+  folder: /home/hyukjunlim03/ccel/fairchem/logs/22068
+  gpus_per_node: 1
+  job_id: '22068'
+  job_name: ''
+  mem: 80GB
+  nodes: 1
+  ntasks_per_node: 1
+  time: 14400
+task: {}
+test_dataset: {}
+trainer: ocp
+val_dataset:
+  src: /DATA/user_scratch/hyukjunlim03/all/val_id/
+
+Loading model: gemnet_oc
+Loaded GemNetOC with 1083276 parameters.
+Loading dataset: oc22_lmdb
+rank: 0: Sampler created...
+Created BalancedBatchSampler with sampler=<fairchem.core.common.data_parallel.StatefulDistributedSampler object at 0x14b218895ac0>, batch_size=8, drop_last=False
+rank: 0: Sampler created...
+Created BalancedBatchSampler with sampler=<fairchem.core.common.data_parallel.StatefulDistributedSampler object at 0x14b218897350>, batch_size=8, drop_last=False
+Attemping to load user specified checkpoint at save_models/crack.pt
+Loading checkpoint from: save_models/crack.pt
+Evaluating on val.
+energy_mae: 0.3090, forces_mae: 0.0432, loss: 10.0836, epoch: 5.0000
+Total time taken: 11.221335172653198
+submitit INFO (2025-10-05 18:01:19,896) - Job completed successfully
+Job completed successfully
+submitit INFO (2025-10-05 18:01:19,898) - Exiting after successful completion
+Exiting after successful completion
+[1;34mwandb[0m: 
+[1;34mwandb[0m: 🚀 View run [33m2025-10-05-18-01-52[0m at: [34mhttps://wandb.ai/hyukjunlim-seoul-national-university/fairchem/runs/2025-10-05-18-01-52[0m
