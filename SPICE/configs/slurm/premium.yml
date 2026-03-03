@@ -1,0 +1,7 @@
+includes:
+  - configs/slurm/base.yml
+
+slurm:
+  qos: premium
+  time: "48:00:00"
+  requeue: True
