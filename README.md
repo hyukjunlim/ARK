@@ -42,9 +42,9 @@ OMat24 and SPICE energy units: meV/atom.
 Force units: meV/A.  
 Stress units: meV/A^3.
 
-## Detailed Experiments
+## Experiments
 
-They are in the README.md files of each subfolder: [OC20](OC20/README.md), [OMat](OMat/README.md), and [SPICE](SPICE/README.md).
+Detailed experiments are described in the README.md files of each subfolder: [OC20](OC20/README.md), [OMat](OMat/README.md), and [SPICE](SPICE/README.md).
 
 ## Acknowledgement
 
