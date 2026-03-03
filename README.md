@@ -44,7 +44,7 @@ Stress units: meV/A^3.
 
 ## Detailed Experiments
 
-They are in each subfolder's README.md file.
+They are in the README.md files of each subfolder: [OC20](OC20/README.md), [OMat](OMat/README.md), and [SPICE](SPICE/README.md).
 
 ## Acknowledgement
 
