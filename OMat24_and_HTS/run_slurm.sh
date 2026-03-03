@@ -9,7 +9,7 @@ StartTime=$(date +%s)
 # cd $SLURM_SUBMIT_DIR
 
 # Run the specified Python script
-sh scripts/train/oc20/s2ef/crack/run.sh
+sh scripts/train/oc20/s2ef/ark/run.sh
 
 EndTime=$(date +%s)
 

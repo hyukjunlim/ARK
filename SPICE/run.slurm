@@ -27,13 +27,13 @@ choice=2
 
 case "$choice" in
     0) # monomers
-        config_path="configs/SPICE/monomers/hessian/gemnet-dT-small-fork.yml"
+        config_path="configs/SPICE/monomers/hessian/gemnet-dT-small-ark.yml"
         ;;
     1) # solvated_amino_acids
-        config_path="configs/SPICE/solvated_amino_acids/hessian/gemnet-dT-small-fork.yml"
+        config_path="configs/SPICE/solvated_amino_acids/hessian/gemnet-dT-small-ark.yml"
         ;;
     2) # iodine
-        config_path="configs/SPICE/iodine/hessian/gemnet-dT-small-fork.yml"
+        config_path="configs/SPICE/iodine/hessian/gemnet-dT-small-ark.yml"
         ;;
     *)
         echo "Invalid choice: $choice"

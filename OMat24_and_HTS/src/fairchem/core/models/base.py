@@ -341,7 +341,7 @@ class HydraModel(nn.Module, GraphModelMixin):
         out = {}
         
         #########################################################
-        # Crack
+        # ARK
         #########################################################
         if 'embs_student' in emb and 'embs_teacher' in emb and 'edge_index' in emb:
             out['embs_student'] = emb['embs_student']

@@ -88,7 +88,7 @@ model:
     max_radius: 12.0
     mmax_list:
     - 3
-    model: crack_backbone
+    model: ark_backbone
     norm_type: layer_norm_sh
     num_distance_basis: 512
     num_heads: 8
@@ -157,7 +157,7 @@ model:
 optim:
   batch_size: 24
   clip_grad_norm: 100
-  crack_coefficient: 0.0
+  ark_coefficient: 0.0
   ema_decay: 0.999
   eval_batch_size: 8
   eval_every: 1000000000

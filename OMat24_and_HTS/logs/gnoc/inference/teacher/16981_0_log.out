@@ -72,7 +72,7 @@ model:
   max_neighbors_aeaint: 20
   max_neighbors_aint: 1000
   max_neighbors_qint: 8
-  name: crack
+  name: ark
   num_after_skip: 2
   num_atom: 2
   num_atom_emb_layers: 2
@@ -94,7 +94,7 @@ model:
   regress_forces: true
   sbf:
     name: legendre_outer
-  scale_file: configs/oc20/s2ef/2M/crack/scaling_factors/crack.pt
+  scale_file: configs/oc20/s2ef/2M/ark/scaling_factors/ark.pt
   teacher_model_args:
     activation: silu
     atom_edge_interaction: true
@@ -199,8 +199,8 @@ trainer: ocp
 val_dataset:
   src: /DATA/user_scratch/hyukjunlim03/all/val_id/
 
-Loading model: crack
-Loaded Crack with Teacher: 38864438 parameters and Student: 1230732 parameters.
+Loading model: ark
+Loaded ARK with Teacher: 38864438 parameters and Student: 1230732 parameters.
 Loading dataset: oc22_lmdb
 rank: 0: Sampler created...
 Created BalancedBatchSampler with sampler=<fairchem.core.common.data_parallel.StatefulDistributedSampler object at 0x149e455b82c0>, batch_size=8, drop_last=False

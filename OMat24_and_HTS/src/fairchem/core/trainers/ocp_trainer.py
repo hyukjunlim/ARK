@@ -260,7 +260,7 @@ class OCPTrainer(BaseTrainer):
         num_atoms_in_batch = batch.natoms.sum()
         
         #########################################################
-        # Crack
+        # ARK
         #########################################################
         if 'embs_student' in out:
             outputs['edge_index'] = out['edge_index']
@@ -329,9 +329,9 @@ class OCPTrainer(BaseTrainer):
 
         return outputs
 
-    def crack_loss(self, z1, z2, edge_index, temperature=0.15):
+    def ark_loss(self, z1, z2, edge_index, temperature=0.15):
         """
-        CRACK: Contrastive Relational-Aware Compression of Knowledge Loss. 
+        ARK: Angular Relational Knowledge Distillation
         Distills the teacher's understanding of interatomic relationships into a student model. 
         Args: 
             z1: Teacher's final node (atom) embeddings [N, D_teacher]. 
@@ -361,7 +361,7 @@ class OCPTrainer(BaseTrainer):
         loss = []
         
         ########################################################
-        # Crack & n2n
+        # ARK & n2n
         ########################################################
         if 'embs_student' in out:
             edge_index = out['edge_index']
@@ -376,7 +376,7 @@ class OCPTrainer(BaseTrainer):
             embs_student_full = embs_student_flat.reshape(-1, num_coeffs_total, teacher_sphere_channels)
             embs_teacher_full = embs_teacher_flat.reshape(-1, num_coeffs_total, teacher_sphere_channels)
 
-            total_crack_loss = 0.0
+            total_ark_loss = 0.0
             total_n2n_loss = 0.0
             
             for l in range(distill_lmax + 1):
@@ -387,15 +387,15 @@ class OCPTrainer(BaseTrainer):
                 student_l = embs_student_full.narrow(1, start_idx, num_coeffs_l).reshape(N, -1)
                 teacher_l = embs_teacher_full.narrow(1, start_idx, num_coeffs_l).reshape(N, -1)
                 
-                if self.config["optim"].get("crack_coefficient", 1.0) > 0.0:
-                    total_crack_loss += self.crack_loss(student_l, teacher_l, edge_index)
+                if self.config["optim"].get("ark_coefficient", 1.0) > 0.0:
+                    total_ark_loss += self.ark_loss(student_l, teacher_l, edge_index)
                 if self.config["optim"].get("n2n_coefficient", 1.0) > 0.0:
                     total_n2n_loss += F.mse_loss(student_l, teacher_l)
 
-            if self.config["optim"].get("crack_coefficient", 1.0) > 0.0:
+            if self.config["optim"].get("ark_coefficient", 1.0) > 0.0:
                 loss.append(
-                    self.config["optim"].get("crack_coefficient", 1.0)
-                    * total_crack_loss
+                    self.config["optim"].get("ark_coefficient", 1.0)
+                    * total_ark_loss
                 )
             if self.config["optim"].get("n2n_coefficient", 1.0) > 0.0:
                 loss.append(

@@ -94,7 +94,7 @@ model:
   regress_forces: true
   sbf:
     name: legendre_outer
-  scale_file: configs/oc20/s2ef/2M/crack/scaling_factors/crack.pt
+  scale_file: configs/oc20/s2ef/2M/ark/scaling_factors/ark.pt
 optim:
   batch_size: 8
   clip_grad_norm: 10
@@ -152,8 +152,8 @@ rank: 0: Sampler created...
 Created BalancedBatchSampler with sampler=<fairchem.core.common.data_parallel.StatefulDistributedSampler object at 0x14b218895ac0>, batch_size=8, drop_last=False
 rank: 0: Sampler created...
 Created BalancedBatchSampler with sampler=<fairchem.core.common.data_parallel.StatefulDistributedSampler object at 0x14b218897350>, batch_size=8, drop_last=False
-Attemping to load user specified checkpoint at save_models/crack.pt
-Loading checkpoint from: save_models/crack.pt
+Attemping to load user specified checkpoint at save_models/ark.pt
+Loading checkpoint from: save_models/ark.pt
 Evaluating on val.
 energy_mae: 0.3090, forces_mae: 0.0432, loss: 10.0836, epoch: 5.0000
 Total time taken: 11.221335172653198

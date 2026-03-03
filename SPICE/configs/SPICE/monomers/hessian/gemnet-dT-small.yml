@@ -24,7 +24,7 @@ outputs:
 
 loss_functions:
   - final_node_features:
-      fn: fork
+      fn: ark
       coefficient: 100
   - energy:
       fn: per_atom_mae

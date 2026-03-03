@@ -43,7 +43,7 @@ class Flags:
         )
         self.parser.add_argument(
             "--job-name",
-            default="fork",
+            default="ark",
             type=str,
             help="Job name",
         )

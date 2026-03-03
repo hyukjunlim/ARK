@@ -698,7 +698,7 @@ class BaseTrainer(ABC):
         strict = self.config.get("task", {}).get("strict_load", False)
         
         #########################################################
-        # Crack
+        # ARK
         #########################################################
         # 1. Validate the trained model
         # load_state_dict(self.model, new_dict, strict=strict)
