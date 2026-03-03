@@ -1,8 +1,9 @@
 _/
 datasets/
-output/
+logs/
 save_logs/
 save_models/
+output/
 save_output/
 
 __pycache__/
